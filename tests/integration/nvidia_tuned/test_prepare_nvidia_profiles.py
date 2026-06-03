@@ -834,3 +834,108 @@ def test_prepare_nvidia_profiles_common_profiles_deployed(base_image):
 
     finally:
         runner.cleanup()
+
+
+def _require_ubuntu_2404(base_image):
+    """vr200 is supported on Ubuntu 24.04 only; skip elsewhere."""
+    if "ubuntu" not in base_image or "24.04" not in base_image:
+        pytest.skip(f"vr200 is Ubuntu 24.04 only; skipping for base image {base_image}")
+
+
+@pytest.mark.parametrize("intent", ["performance", "inference", "multiNodeTraining"])
+def test_prepare_nvidia_profiles_vr200_no_service(base_image, intent):
+    """vr200 (no service) builds nvidia-vr200-<intent> and KEEPS bootloader on 24.04."""
+    _require_ubuntu_2404(base_image)
+    runner = DockerTestRunner(package="nvidia-tuned", base_image=base_image)
+    try:
+        configmaps = {"accelerator": "vr200", "intent": intent}
+        try:
+            runner.run_script(
+                script="prepare_nvidia_profiles.sh",
+                configmaps=configmaps,
+                skip_system_operations=True,
+            )
+        except Exception:
+            pass
+        if runner.container is None:
+            raise RuntimeError("Container was not created by run_script")
+        install_tuned_in_container(runner, base_image)
+        result = run_script_in_container(runner, "prepare_nvidia_profiles.sh", configmaps)
+
+        assert_exit_code(result, 0)
+        expected_profile = f"nvidia-vr200-{intent}"
+        assert runner.file_exists(f"/etc/tuned/{expected_profile}/tuned.conf"), \
+            f"vr200 profile {expected_profile} was not deployed"
+    finally:
+        runner.cleanup()
+
+
+@pytest.mark.parametrize("intent", ["performance", "inference", "multiNodeTraining"])
+def test_prepare_nvidia_profiles_vr200_eks_keeps_bootloader(base_image, intent):
+    """eks-vr200 final profile chain retains [bootloader] tuning (reboot OK on eks)."""
+    _require_ubuntu_2404(base_image)
+    runner = DockerTestRunner(package="nvidia-tuned", base_image=base_image)
+    try:
+        configmaps = {"accelerator": "vr200", "intent": intent, "service": "eks"}
+        try:
+            runner.run_script(
+                script="prepare_nvidia_profiles.sh",
+                configmaps=configmaps,
+                skip_system_operations=True,
+            )
+        except Exception:
+            pass
+        if runner.container is None:
+            raise RuntimeError("Container was not created by run_script")
+        install_tuned_in_container(runner, base_image)
+        result = run_script_in_container(runner, "prepare_nvidia_profiles.sh", configmaps)
+
+        assert_exit_code(result, 0)
+        final_profile = f"eks-vr200-{intent}"
+        assert runner.file_exists(f"/etc/tuned/{final_profile}/tuned.conf"), \
+            f"eks service profile {final_profile} was not deployed"
+        # The vr200-performance base (in the chain) carries [bootloader].
+        perf = runner.get_file_contents("/etc/tuned/nvidia-vr200-performance/tuned.conf")
+        assert "[bootloader]" in perf, "eks vr200 performance base should keep [bootloader]"
+        # eks wires bootloader via its script.sh
+        assert runner.file_exists(f"/etc/tuned/{final_profile}/bootloader.sh"), \
+            "eks bootloader.sh was not deployed"
+    finally:
+        runner.cleanup()
+
+
+@pytest.mark.parametrize("intent", ["performance", "inference", "multiNodeTraining"])
+def test_prepare_nvidia_profiles_vr200_bcm_no_bootloader(base_image, intent):
+    """bcm-vr200 active chain contains NO [bootloader] stanza (applies without reboot)."""
+    _require_ubuntu_2404(base_image)
+    runner = DockerTestRunner(package="nvidia-tuned", base_image=base_image)
+    try:
+        configmaps = {"accelerator": "vr200", "intent": intent, "service": "bcm"}
+        try:
+            runner.run_script(
+                script="prepare_nvidia_profiles.sh",
+                configmaps=configmaps,
+                skip_system_operations=True,
+            )
+        except Exception:
+            pass
+        if runner.container is None:
+            raise RuntimeError("Container was not created by run_script")
+        install_tuned_in_container(runner, base_image)
+        result = run_script_in_container(runner, "prepare_nvidia_profiles.sh", configmaps)
+
+        assert_exit_code(result, 0)
+        final_profile = f"bcm-vr200-{intent}"
+        assert runner.file_exists(f"/etc/tuned/{final_profile}/tuned.conf"), \
+            f"bcm service profile {final_profile} was not deployed"
+        # The bcm override re-roots the workload profile on the bootloader-free base.
+        workload = runner.get_file_contents(f"/etc/tuned/nvidia-vr200-{intent}/tuned.conf")
+        assert "include=nvidia-vr200-noreboot-base" in workload, \
+            "bcm vr200 workload profile must include the bootloader-free base"
+        assert "[bootloader]" not in workload, "bcm vr200 workload profile must not have [bootloader]"
+        noreboot = runner.get_file_contents(
+            "/etc/tuned/nvidia-vr200-noreboot-base/tuned.conf"
+        )
+        assert "[bootloader]" not in noreboot, "noreboot base must not have [bootloader]"
+    finally:
+        runner.cleanup()
