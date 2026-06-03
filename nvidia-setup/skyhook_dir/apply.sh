@@ -59,9 +59,19 @@ run_eks_gb200() {
   "${STEPS_DIR}/setup_local_disks.sh" raid0
 }
 
+run_eks_vr200() {
+  "${STEPS_DIR}/upgrade.sh"
+  "${STEPS_DIR}/install-efa-driver.sh" "${EFA}"
+  "${STEPS_DIR}/install_ofi.sh"
+  # "${STEPS_DIR}/install-lustre.sh" "${KERNEL}" "${LUSTRE}"
+  "${STEPS_DIR}/configure-chrony.sh"
+  "${STEPS_DIR}/setup_local_disks.sh" raid0
+}
+
 case "${COMBINATION}" in
   eks-h100)  run_eks_h100 ;;
   eks-gb200) run_eks_gb200 ;;
+  eks-vr200) run_eks_vr200 ;;
   *)
     echo "Unsupported combination: ${COMBINATION}" >&2
     echo "Supported: $(find "${DEFAULTS_DIR}" -maxdepth 1 -name '*.conf' -exec basename {} .conf \; 2>/dev/null | tr '\n' ' ')" >&2
