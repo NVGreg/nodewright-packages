@@ -2,6 +2,12 @@
 
 All notable changes to this package will be documented in this file.
 
+## [Unreleased]
+
+### New Features
+
+- *(nvidia-tuned)* Add `vr200` accelerator profiles (Ubuntu 24.04 only): a gb200-equivalent that keeps `[bootloader]` tuning under `service=eks` and uses a bootloader-free chain under `service=bcm` by [@ayuskauskas](https://github.com/ayuskauskas)
+
 ## [0.3.0] - 2026-04-27
 
 ### Bug Fixes
