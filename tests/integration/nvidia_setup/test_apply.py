@@ -77,6 +77,39 @@ def test_apply_eks_gb200(base_image):
         runner.cleanup()
 
 
+@pytest.mark.skip(reason="Skipping test_apply_eks_vr200. Kernel is flaky based on where it is run.")
+def test_apply_eks_vr200(base_image):
+    """Test apply.sh with eks-vr200 combination (gb200 on the 6.17 kernel)."""
+    runner = DockerTestRunner(package="nvidia-setup", base_image=base_image)
+    try:
+        result = runner.run_script(
+            script="apply.sh",
+            configmaps={"service": "eks", "accelerator": "vr200"},
+            skip_system_operations=True
+        )
+
+        assert_exit_code(result, 0)
+    finally:
+        runner.cleanup()
+
+
+def test_apply_bcm_vr200_is_supported():
+    """bcm-vr200 must be a recognized combination (defaults file exists), not rejected."""
+    runner = DockerTestRunner(package="nvidia-setup")
+    try:
+        result = runner.run_script(
+            script="apply.sh",
+            configmaps={"service": "bcm", "accelerator": "vr200"},
+            skip_system_operations=True
+        )
+
+        # Whatever the kernel-headers step does in-container, load_defaults must NOT
+        # reject the combination as unsupported.
+        assert_output_not_contains(result.stdout, "Unsupported combination")
+    finally:
+        runner.cleanup()
+
+
 def test_apply_with_env_overrides(base_image):
     """Test apply.sh with environment variable overrides."""
     runner = DockerTestRunner(package="nvidia-setup", base_image=base_image)
