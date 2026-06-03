@@ -7,6 +7,7 @@ All notable changes to this package will be documented in this file.
 ### New Features
 
 - *(nvidia-setup)* Add `bcm` service that aliases `/usr/src/linux-$(uname -r)` to Ubuntu's `linux-headers-$(uname -r)` tree so `aicr validate` finds `.config` ([AICR #1093](https://github.com/NVIDIA/aicr/issues/1093)) by [@ayuskauskas](https://github.com/ayuskauskas)
+- *(nvidia-setup)* Add `vr200` accelerator (gb200 setup pinned to the 6.17 kernel `6.17.0-1017-aws`) for `eks` and `bcm` services by [@ayuskauskas](https://github.com/ayuskauskas)
 
 ## [0.2.2] - 2026-04-27
 

@@ -20,8 +20,10 @@ See [VERSION_OVERVIEW.md](VERSION_OVERVIEW.md) for more information about what i
 |---------|-------------|---------------------|--------------|
 | eks     | h100        | 6.14.0-1018-aws     |  1.47.0      |
 | eks     | gb200       | 6.14.0-1018-aws     |  1.47.0      |
+| eks     | vr200       | 6.17.0-1017-aws     |  1.47.0      |
 | bcm     | h100        | n/a                 |  n/a         |
 | bcm     | gb200       | n/a                 |  n/a         |
+| bcm     | vr200       | n/a                 |  n/a         |
 
 Defaults are defined in `skyhook_dir/defaults/eks-h100.conf` and `eks-gb200.conf`. The `bcm-*` defaults files are intentionally empty: the `bcm` service only runs the kernel-headers alias and does not bake in any kernel/EFA/lustre versions. Keep this table in sync when adding or changing defaults.
 
@@ -30,7 +32,7 @@ Defaults are defined in `skyhook_dir/defaults/eks-h100.conf` and `eks-gb200.conf
 **ConfigMap (required):**
 
 - `service` – e.g. `eks`
-- `accelerator` – e.g. `h100`, `gb200`
+- `accelerator` – e.g. `h100`, `gb200`, `vr200`
 
 **Environment variables (optional overrides):**
 
